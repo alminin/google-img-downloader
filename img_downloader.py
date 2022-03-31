@@ -21,7 +21,7 @@ driver = webdriver.Chrome(executable_path=r"/home/alminin/WebDrivers/chromedrive
 
 driver.get('https://www.google.com/search?q=rose&source=lnms&tbm=isch')
 
-def cfigure_logging():
+def configure_logging():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
