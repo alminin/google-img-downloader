@@ -62,9 +62,9 @@ def get_soup(url, headers):
 def parse_img_href(href):
         pass
 
-def get_img_urls(soup):  
+def get_img_urls(driver, num_pages):  
     img_tags = driver.find_elements(By.CSS_SELECTOR, 'a.wXeWr')
-    img_tags = img_tags[:num]
+    img_tags = img_tags[:num_pages]
     for tag in img_tags: tag.click()
     img_urls = []
     for tag in img_tags:
