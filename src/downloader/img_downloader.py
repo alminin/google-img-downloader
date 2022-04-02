@@ -1,4 +1,5 @@
 import logging
+from typing import List
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -59,10 +60,15 @@ def get_images(url, headers):
         logger.exception(e)
         raise SystemExit(e)  
 
-def parse_img_href(href):
-        pass
+def parse_img_href(href: str) -> str:
+    ''' Extracts img url from href and returns it '''
+    full_query = urlparse(href).query
+    imgurl = full_query.split('&')[0]
+    url = imgurl.split('=')[1].replace(r'%2F', r'/').replace(r'%3A', ':')
+    return url
 
-def get_img_urls(driver, num_pages):  
+def get_img_urls(driver, num_pages: int) -> List:  
+    ''' Gets num images urls '''
     img_tags = driver.find_elements(By.CSS_SELECTOR, 'a.wXeWr')
     img_tags = img_tags[:num_pages]
     for tag in img_tags: tag.click()
