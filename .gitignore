@@ -56,6 +56,9 @@ coverage.xml
 .pytest_cache/
 cover/
 
+#downloads folder
+Download/
+
 # Translations
 *.mo
 *.pot
