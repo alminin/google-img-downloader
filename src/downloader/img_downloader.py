@@ -41,10 +41,13 @@ def configure_logging():
 logger = configure_logging()
 
 def get_query_url(query):
+    ''' Returns url with query to search images on google.com '''
+    
     return 'https://www.google.com/search?q=%s&source=lnms&tbm=isch' % query
 
 def parse_img_href(href: str) -> str:
     ''' Extracts img url from href and returns it '''
+
     full_query = urlparse(href).query
     imgurl = full_query.split('&')[0]
     url = imgurl.split('=')[1].replace(r'%2F', r'/').replace(r'%3A', ':')
@@ -52,7 +55,9 @@ def parse_img_href(href: str) -> str:
     return url
 
 def get_img_urls(query_url, num_pages: int) -> List:  
-    ''' Gets num images urls '''
+    ''' Gets num images urls from search results on google.com 
+    Returns urls list. '''
+
     driver.get(query_url)
     logger.info(f'Extracting img urls on {query_url}')
     img_tags = driver.find_elements(By.CSS_SELECTOR, 'a.wXeWr')
@@ -70,7 +75,7 @@ def get_img_urls(query_url, num_pages: int) -> List:
     return img_urls
 
 def get_img(url: str) -> requests.Response:
-    ''' Makes get request to url and returns response '''
+    ''' Makes get request to url and returns response or None if exception happens'''
 
     req_headers = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
@@ -79,46 +84,59 @@ def get_img(url: str) -> requests.Response:
     }
 
     try:
-        with requests.get(url, headers=req_headers) as res:
+        with requests.get(url, headers=req_headers, timeout=2) as res:
             return res
-    except requests.exceptions.Timeout:
+    except requests.exceptions.Timeout as e:
         logger.info('Timed out to load page')
         logger.exception(e)
+        return None
+    except requests.exceptions.ConnectionError as e:
+        logger.exception(e)
+        return None
+    except requests.exceptions.HTTPError as e:
+        logger.exception(e)
+        return None
     except requests.exceptions.RequestException as e:
         logger.exception(e)
-        raise SystemExit(e)  
+        return None
 
 def get_img_ext(url: str) -> str:
+    ''' Gets image file extension from usl string '''
+
     path = urlparse(url).path
     ext = os.path.splitext(path)[1]
-    #ext = ext if ext else '.jpg'
+    ext = ext if ext else '.jpg'
     return ext
 
 def check_img_format(file_path: str):
     ''' Checks image file's type and change extension if needed '''
+
     ext = imghdr.what(file_path)
     if ext == None: ext = 'webp'
     file_name = os.path.splitext(os.path.abspath(file_path))[0]
     full_file_name = file_name+'.'+str(ext)
     os.rename(file_path, full_file_name)
 
-def save_img(res: requests.Response, keyword: str, ext: str, dir: str):
+def save_img(res: requests.Response, keyword: str, ext: str, dir: str) -> int:
     ''' Saves response raw to file with unique name and chosen extension.
     Args:
     res - Response object from GET request to img url
     ext - files extension with dot
-    dir - directory to save img files'''
+    dir - directory to save img files
+    Returns 1 if image saved successfully , or 0 if image not saved '''
 
     file_name = keyword + '-' + str(uuid.uuid4()) + ext
     if not os.path.exists(dir):
         os.mkdir(os.path.join('.', dir))
     path = os.path.join(dir, file_name)
-    if res.status_code == 200:
+    if res and res.status_code == 200:
         with open(path, 'wb') as f:
             for chunk in res:
                 f.write(chunk)
         logger.info('Saving images')
         check_img_format(path)
+        return 1
+    else: return 0
     
 def run(query: str, dir: str, num: int) -> None:
     ''' Runs script. 
@@ -126,14 +144,16 @@ def run(query: str, dir: str, num: int) -> None:
     query - search keyword to find images 
     dir - directory to save img files 
     num - number of images'''
+
     query = '+'.join(query.split())
     query_url = get_query_url(query)
     img_urls = get_img_urls(query_url, num)
+    num_saved = 0
     for url in img_urls:
         res = get_img(url)
         ext = get_img_ext(url)
-        save_img(res, query, ext, dir)
-    logger.info(f'Finished! {num} {query} images have been saved.')
+        num_saved += save_img(res, query, ext, dir)
+    logger.info(f'Finished! {num_saved} from {num} {query} images have been saved.')
 
 def main():
     parser = argparse.ArgumentParser(description='Search and download images')
