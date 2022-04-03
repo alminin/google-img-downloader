@@ -1,5 +1,9 @@
 # google-img-downloader
 Search images by keyword on google.com and download choosen number of pictures
+# Install
+```
+pip install -r requirements.txt
+```
 # Usage:
 ```
 python3 src/downloader/image-downloader.py -s nature -n 5 -d Download
